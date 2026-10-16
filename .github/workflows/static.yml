@@ -38,6 +38,11 @@ jobs:
         with:
           # Upload entire repository
           path: '.'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'any'
+          channel: 'stable'         
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
