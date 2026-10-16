@@ -16,7 +16,6 @@ permissions:
   id-token: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -31,13 +30,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+
+      # 1. Сначала настраиваем Java и Flutter (это база)
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          # Upload entire repository
-          path: '.'
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -47,15 +47,32 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # 2. Собираем Web-версию для GitHub Pages
+      - name: Build Flutter Web
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+      # 3. Собираем мобильный APK
       - name: Build APK
         run: flutter build apk --release
 
+      # 4. Сохраняем APK как обычный артефакт (для скачивания руками)
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: flutter-app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
+      # 5. Настраиваем интеграцию с GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 6. Упаковываем именно собранный Web-сайт (а не весь репозиторий)
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/web' # Указываем папку с готовым сайтом Flutter!
+
+      # 7. Публикуем сайт в сеть
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
